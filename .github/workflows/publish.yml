@@ -1,6 +1,5 @@
 name: 'publish'
 
-# This will trigger the action on each push to the `release` branch.
 on:
   push:
     branches:
@@ -13,11 +12,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-latest]
+        # ubuntu-latest를 추가하여 안드로이드 빌드용으로 사용합니다.
+        platform: [macos-latest, ubuntu-20.04, windows-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+
+      # 1. 안드로이드 빌드를 위한 Java 설정 (ubuntu-latest에서만 실행)
+      - name: setup Java
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 2. Android SDK 설정 (ubuntu-latest에서만 실행)
+      - name: setup Android SDK
+        if: matrix.platform == 'ubuntu-latest'
+        uses: android-actions/setup-android@v3
 
       - name: setup node
         uses: actions/setup-node@v4
@@ -26,31 +39,26 @@ jobs:
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          # 안드로이드 아키텍처 타겟들을 추가합니다.
+          targets: ${{ matrix.platform == 'ubuntu-latest' && 'aarch64-linux-android,armv7-linux-android,i686-linux-android,x86_64-linux-android' || '' }}
 
-      - name: install dependencies (ubuntu only)
+      - name: install dependencies (ubuntu 20.04 데스크톱 전용)
         if: matrix.platform == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: install frontend dependencies
-        run: npm install # change this to npm or pnpm depending on which one you use
+        run: npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
+          tagName: app-v__VERSION__
           releaseName: 'Amica v__VERSION__'
-          releaseBody: |
-            # Amica __VERSION__
-            ## Download Notes
-            * `.dmg` is for **macOS**
-            * `.app.tar.gz` is for **macOS**
-            * `.exe` is for **Windows**
-            * `.msi` is for **Windows**
-            * `.AppImage` is for any **Linux 64 bit**
-            * * **Note**: Be sure to set this to executable to run it (`chmod +x`)
-            * `.deb` is for Debian (or Ubuntu) distributions
+          # 안드로이드 빌드를 위해 추가하는 옵션
+          args: ${{ matrix.platform == 'ubuntu-latest' && '--target universal-android' || '' }}
           releaseDraft: true
           prerelease: false
