@@ -16,7 +16,7 @@
         "label": "main",
         "fullscreen": false,
         "resizable": true,
-        "transparent": false // 안드로이드 안정성을 위해 false 권장
+        "transparent": false 
       }
     ]
   },
@@ -32,7 +32,7 @@
     ],
     "android": {
       "minSdkVersion": 24,
-      "targetSdkVersion": 34, // 2026년 기준 최신 가이드라인 준수
+      "targetSdkVersion": 34, 
       "applicationId": "com.wonj6032.amica",
       "vulkan": true
     }
